@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  namespace: "{{ NAMESPACE }}"
+  name: guacrobot
+  labels:
+    app.kubernetes.io/name: guacrobot
+    app.kubernetes.io/part-of: dcaas 

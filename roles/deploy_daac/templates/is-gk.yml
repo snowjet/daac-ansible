@@ -1,0 +1,20 @@
+kind: ImageStream
+apiVersion: image.openshift.io/v1
+metadata:
+  name: gatekeeper
+  namespace: "{{ NAMESPACE }}"  
+  labels:
+    app: flask
+spec:
+  tags:
+    - name: latest
+      annotations:
+        openshift.io/generated-by: OpenShiftWebConsole
+        openshift.io/imported-from: quay.io/louketo/louketo-proxy
+      from:
+        kind: DockerImage
+        name: quay.io/louketo/louketo-proxy
+      generation: 2
+      importPolicy: {}
+      referencePolicy:
+        type: Source

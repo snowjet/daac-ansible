@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  namespace: "{{ NAMESPACE }}"
+  name: guac
+  labels:
+    app.kubernetes.io/name: guac
+    app.kubernetes.io/part-of: dcaas  
+    app.kubernetes.io/component: server  
+spec:
+  ports:
+  - port: 3000
+    protocol: TCP
+    targetPort: 3000
+  selector:
+    name: guac

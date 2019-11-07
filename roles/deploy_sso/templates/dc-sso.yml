@@ -1,0 +1,62 @@
+apiVersion: v1
+kind: DeploymentConfig
+metadata:
+  namespace: "{{ NAMESPACE }}"
+  annotations:
+    description: SSO Server
+    app.openshift.io/connects-to: 'sso, daac-api'
+  name: sso
+  labels:
+    app.kubernetes.io/name: sso
+    app.kubernetes.io/part-of: dcaas  
+    app.kubernetes.io/component: server
+    app.openshift.io/runtime: java
+spec:
+  replicas: 1
+  selector:
+    name: sso
+  strategy:
+    type: Rolling
+  template:
+    metadata:
+      labels:
+        name: sso
+      name: sso
+    spec:
+      volumes:
+        - name: keycloak-data
+          persistentVolumeClaim:
+            claimName: keycloak-data      
+      containers:
+      - name: sso
+        image: sso:latest
+        imagePullPolicy: Always
+        volumeMounts:
+          - name: keycloak-data
+            mountPath: /opt/jboss/keycloak/standalone/data            
+        ports:
+        - name: sso-port
+          containerPort: 8443
+        readinessProbe:
+          tcpSocket:
+            port: sso-port
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: sso-port
+          initialDelaySeconds: 15
+          periodSeconds: 20
+        envFrom:
+          - configMapRef:
+              name: configmap-sso          
+  triggers:
+  - type: ConfigChange
+  - imageChangeParams:
+      automatic: true
+      containerNames:
+      - sso
+      from:
+        kind: ImageStreamTag
+        name: sso:latest
+    type: ImageChange

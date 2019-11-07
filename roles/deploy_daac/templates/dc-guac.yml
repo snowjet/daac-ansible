@@ -1,0 +1,105 @@
+apiVersion: v1
+kind: DeploymentConfig
+metadata:
+  namespace: "{{ NAMESPACE }}"
+  annotations:
+    description: Guacamole Client
+    app.openshift.io/connects-to: 'guacd, postgres'
+  name: guac
+  labels:
+    app.kubernetes.io/name: guac
+    app.kubernetes.io/part-of: dcaas  
+    app.kubernetes.io/component: server
+    app.openshift.io/runtime: java
+spec:
+  replicas: 1
+  selector:
+    name: guac
+  strategy:
+    type: Rolling
+  template:
+    metadata:
+      labels:
+        name: guac
+      name: guac
+    spec:
+      containers:
+      - name: guac
+        image: "guac:{{ VERSION }}"
+        imagePullPolicy: Always    
+        ports:
+        - name: guac-port
+          containerPort: 8080
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              key: database-user
+              name: postgres
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: database-password
+              name: postgres
+        - name: POSTGRES_DATABASE
+          valueFrom:
+            secretKeyRef:
+              key: database-name
+              name: postgres
+        - name: GUACD_HOSTNAME
+          value: guacd
+        - name: GUACD_PORT
+          value: '4822'
+        - name: POSTGRES_HOSTNAME
+          value: postgres
+        - name: LOG_LEVEL
+          value: "{{ LOG_LEVEL }}"
+        volumeMounts:
+          - name: guac-config
+            mountPath: /guac
+        readinessProbe:
+          tcpSocket:
+            port: guac-port
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: guac-port
+          initialDelaySeconds: 15
+          periodSeconds: 20
+      - name: gatekeeper
+        image: 'quay.io/louketo/louketo-proxy'
+        args:
+          - --config=/etc/keycloak-gatekeeper.conf
+        ports:
+          - containerPort: 3000
+            name: gk-daac-api
+        volumeMounts:
+          - name: gatekeeper-config
+            mountPath: /etc/keycloak-gatekeeper.conf
+            subPath: keycloak-gatekeeper.conf
+          - name: gatekeeper-files
+            mountPath: /html      
+      volumes:
+      - name: guac-config
+        configMap:
+          name: guac-configmap
+          items:
+            - key: guacamole.properties
+              path: guacamole.properties
+      - name : gatekeeper-config
+        configMap:
+          name: guac-gk-config
+      - name : gatekeeper-files
+        configMap:
+          name: gatekeeper-files               
+  triggers:
+  - type: ConfigChange
+  - imageChangeParams:
+      automatic: true
+      containerNames:
+      - guac
+      from:
+        kind: ImageStreamTag
+        name: "guac:{{ VERSION }}"
+    type: ImageChange

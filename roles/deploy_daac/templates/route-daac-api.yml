@@ -1,0 +1,23 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  namespace: "{{ NAMESPACE }}"
+  name: daac
+  labels:
+    app.kubernetes.io/name: daac-api
+    app.kubernetes.io/part-of: dcaas
+    app.kubernetes.io/component: frontend
+    app.openshift.io/runtime: python
+spec:
+  host: "daac.{{ OCP_APPS_DOMAIN }}"
+  subdomain: ''
+  to:
+    kind: Service
+    name: daac-api
+    weight: 100
+  port:
+    targetPort: 3000
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None

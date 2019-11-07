@@ -1,0 +1,10 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  name: sso-public-key
+  namespace: "{{ NAMESPACE }}"  
+data:
+  PUBLIC_KEY: |
+    -----BEGIN PUBLIC KEY-----
+    {{ sso_params.json.public_key }}
+    -----END PUBLIC KEY-----

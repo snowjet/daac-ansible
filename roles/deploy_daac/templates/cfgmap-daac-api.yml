@@ -1,0 +1,19 @@
+kind: ConfigMap
+apiVersion: v1
+metadata:
+  namespace: "{{ NAMESPACE }}"
+  name: configmap-daac-api
+  labels:
+    app.kubernetes.io/name: daac-api
+    app.kubernetes.io/part-of: dcaas
+    app.kubernetes.io/component: frontend
+    app.openshift.io/runtime: python  
+data:
+  env: |-
+    # Guac
+    GUACADMIN_PASSWORD="{{ GUACADMIN_PASSWORD }}"
+    # OpenID
+    client_id="{{ oauth_client_id }}"
+    client_secret="{{ oauth_client_secret }}"
+    auth0_domain="{{ auth0_domain }}"
+    daac_redirect_domain="https://daac.{{ OCP_APPS_DOMAIN }}"

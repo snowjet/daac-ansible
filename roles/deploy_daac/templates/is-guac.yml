@@ -1,0 +1,12 @@
+apiVersion: "v1"
+kind: "ImageStream"
+metadata:
+  namespace: "{{ NAMESPACE }}"
+  name: "guac"
+  labels:
+    app.kubernetes.io/name: guac
+    app.kubernetes.io/part-of: dcaas  
+    app.kubernetes.io/component: server
+    app.openshift.io/runtime: java  
+spec:
+  dockerImageRepository: quay.io/rarm_sa/guac-http-auth

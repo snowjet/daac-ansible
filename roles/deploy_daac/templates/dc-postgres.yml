@@ -1,0 +1,86 @@
+apiVersion: v1
+kind: DeploymentConfig
+metadata:
+  namespace: "{{ NAMESPACE }}"
+  annotations:
+    template.alpha.openshift.io/wait-for-ready: "true"
+  name: postgres
+  labels:
+    app.kubernetes.io/name: postgresql
+    app.kubernetes.io/part-of: dcaas
+    app.kubernetes.io/component: database  
+spec:
+  replicas: 1
+  selector:
+    name: postgres
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        name: postgres
+    spec:
+      containers:
+      - capabilities: {}
+        env:
+        - name: POSTGRESQL_USER
+          valueFrom:
+            secretKeyRef:
+              key: database-user
+              name: postgres
+        - name: POSTGRESQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: database-password
+              name: postgres
+        - name: POSTGRESQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              key: database-name
+              name: postgres
+        image: ' '
+        imagePullPolicy: IfNotPresent
+        livenessProbe:
+          exec:
+            command:
+            - /usr/libexec/check-container
+            - --live
+          initialDelaySeconds: 120
+          timeoutSeconds: 10
+        name: postgresql
+        ports:
+        - containerPort: 5432
+          protocol: TCP
+        readinessProbe:
+          exec:
+            command:
+            - /usr/libexec/check-container
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
+        resources:
+          limits:
+            memory: 512Mi
+        securityContext:
+          capabilities: {}
+          privileged: false
+        terminationMessagePath: /dev/termination-log
+        volumeMounts:
+        - mountPath: /var/lib/pgsql/data
+          name: postgres-data
+      dnsPolicy: ClusterFirst
+      restartPolicy: Always
+      volumes:
+      - emptyDir:
+          medium: ""
+        name: postgres-data
+  triggers:
+  - imageChangeParams:
+      automatic: true
+      containerNames:
+      - postgresql
+      from:
+        kind: ImageStreamTag
+        name: postgresql:9.6
+        namespace: openshift
+    type: ImageChange
+  - type: ConfigChange

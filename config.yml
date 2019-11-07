@@ -1,0 +1,79 @@
+---
+- hosts: localhost
+  connection: local
+  tasks:
+    - name: Login to KeyCloak
+      uri:
+        method: POST
+        url: "https://sso.{{ OCP_APPS_DOMAIN }}/auth/realms/master/protocol/openid-connect/token"
+        validate_certs: no
+        body_format: form-urlencoded
+        body:
+          username: "{{ KEYCLOAK_USER }}"
+          password: "{{ KEYCLOAK_PASSWORD }}"
+          grant_type: password
+          client_id: admin-cli
+      register: token
+
+    - name: debug
+      debug:
+        var: token.json.access_token
+
+    - name: Get Public Key
+      uri:
+        method: GET
+        url: "https://sso.{{ OCP_APPS_DOMAIN }}/auth/realms/master"
+        validate_certs: no
+        body_format: json    
+        headers: 
+          Authorization: "bearer {{ token.json.access_token }}"
+      register: result        
+
+    - name: debug
+      debug:
+        var: result   
+     
+    - name: Get Users
+      uri:
+        method: GET
+        url: "https://sso.{{ OCP_APPS_DOMAIN }}/auth/admin/realms/master/users?username={{ user.username }}"
+        validate_certs: no
+        body_format: form-urlencoded
+        status_code: '200'
+        headers: 
+          Authorization: "bearer {{ token.json.access_token }}"
+      register: users
+
+    - name: debug
+      debug:
+        var: users      
+
+    - name: Create User
+      uri:
+        method: POST
+        url: "https://sso.{{ OCP_APPS_DOMAIN }}/auth/admin/realms/master/users"
+        validate_certs: no
+        body_format: json
+        status_code: '201'
+        headers: 
+          Authorization: "bearer {{ token.json.access_token }}"
+        body:
+          username: "{{ user.username }}"
+          firstName: "{{ user.firstName }}"
+          lastName: "{{ user.lastName }}"
+          email: "{{ user.email }}"
+          enabled: true
+          emailVerified: true
+          credentials: 
+            - type: 'password'
+              value: "{{ user.password }}"
+              temporary: false
+          groups:
+            - basic_user
+            - admin              
+      register: result
+      when: users.json[0].username is not defined
+
+    - name: debug
+      debug:
+        var: result      

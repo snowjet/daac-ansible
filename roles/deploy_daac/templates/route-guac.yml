@@ -1,0 +1,24 @@
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  namespace: "{{ NAMESPACE }}"
+  name: guac
+  labels:
+    app.kubernetes.io/name: guac
+    app.kubernetes.io/part-of: dcaas  
+    app.kubernetes.io/component: server
+    app.openshift.io/runtime: java  
+spec:
+  host: "guac.{{ OCP_APPS_DOMAIN }}"
+  subdomain: ''
+  to:
+    kind: Service
+    name: guac
+    weight: 100
+  port:
+    targetPort: 3000
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
+  wildcardPolicy: None
+

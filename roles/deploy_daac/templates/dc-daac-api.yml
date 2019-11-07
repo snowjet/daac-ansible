@@ -1,0 +1,106 @@
+apiVersion: v1
+kind: DeploymentConfig
+metadata:
+  namespace: "{{ NAMESPACE }}"
+  name: daac-api
+  annotations:
+    template.alpha.openshift.io/wait-for-ready: "true"
+    app.openshift.io/connects-to: postgres
+  labels:
+      app.kubernetes.io/name: daac-api
+      app.kubernetes.io/part-of: dcaas
+      app.kubernetes.io/component: frontend
+      app.openshift.io/runtime: python
+spec:
+  replicas: 1
+  selector:
+    name: daac-api
+  strategy:
+    type: Rolling
+  template:
+    metadata:
+      labels:
+        name: daac-api
+      name: daac-api
+    spec:
+      containers:
+      - name: daac-api
+        image: "daac-api:{{ VERSION }}"
+        imagePullPolicy: Always    
+        ports:
+        - name: daac-api-port
+          containerPort: 8080
+        env:
+        - name: POSTGRES_USER
+          valueFrom:
+            secretKeyRef:
+              key: database-user
+              name: postgres
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: database-password
+              name: postgres
+        - name: POSTGRES_DATABASE
+          valueFrom:
+            secretKeyRef:
+              key: database-name
+              name: postgres           
+        - name: LOG_LEVEL
+          value: INFO  
+        - name: APP_HOME
+          value: flask
+        - name: env_file
+          value:  /opt/app-root/env/.env
+        - name: GUAC_URL
+          value: "https://guac.{{ OCP_APPS_DOMAIN }}"          
+        volumeMounts:
+          - name: daac-api-config
+            mountPath: /opt/app-root/env                       
+        readinessProbe:
+          tcpSocket:
+            port: daac-api-port
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        livenessProbe:
+          tcpSocket:
+            port: daac-api-port
+          initialDelaySeconds: 15
+          periodSeconds: 20
+      - name: gatekeeper
+        image: 'quay.io/louketo/louketo-proxy'
+        args:
+          - --config=/etc/keycloak-gatekeeper.conf
+        ports:
+          - containerPort: 3000
+            name: gk-daac-api
+        volumeMounts:
+          - name: gatekeeper-config
+            mountPath: /etc/keycloak-gatekeeper.conf
+            subPath: keycloak-gatekeeper.conf
+          - name: gatekeeper-files
+            mountPath: /html      
+      serviceAccount: guacrobot
+      volumes:
+        - name: daac-api-config
+          configMap:
+            name: configmap-daac-api
+            items:
+              - key: env
+                path: .env
+        - name : gatekeeper-config
+          configMap:
+            name: daac-gk-config
+        - name : gatekeeper-files
+          configMap:
+            name: gatekeeper-files                 
+  triggers:
+  - type: ConfigChange
+  - imageChangeParams:
+      automatic: true
+      containerNames:
+      - daac-api
+      from:
+        kind: ImageStreamTag
+        name: "daac-api:{{ VERSION }}"
+    type: ImageChange
